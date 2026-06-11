@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Sidebar, { MobileNav } from './components/Sidebar'
 import PostDetailModal from './components/PostDetailModal'
@@ -13,6 +14,7 @@ import Reels from './pages/Reels'
 import Profile from './pages/Profile'
 import Search from './pages/Search'
 import Messages from './pages/Messages'
+import Notifications from './pages/Notifications'
 
 const AUTH_PATHS = ['/login', '/register']
 
@@ -46,7 +48,7 @@ function AppLayout() {
           <Route path="/search" element={<Search />} />
           <Route path="/explore" element={<PlaceholderPage label="Explore" />} />
           <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-          <Route path="/notifications" element={<PlaceholderPage label="Notifications" />} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
         </Routes>
 
         {/* Modal overlay — rendered on top when navigated with background state */}
@@ -72,7 +74,9 @@ function PlaceholderPage({ label }) {
 function App() {
   return (
     <AuthProvider>
-      <AppLayout />
+      <NotificationsProvider>
+        <AppLayout />
+      </NotificationsProvider>
     </AuthProvider>
   )
 }

@@ -4,6 +4,7 @@ import {
   Heart, SquarePlus, MoreHorizontal
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { useNotifications } from '../context/NotificationsContext'
 import Avatar from './Avatar'
 
 const NAV_ITEMS = [
@@ -16,17 +17,24 @@ const NAV_ITEMS = [
   { label: 'Create', Icon: SquarePlus, to: '/create' },
 ]
 
-function NavItem({ label, Icon, to, active }) {
+function NavItem({ label, Icon, to, active, badge }) {
   return (
     <Link
       to={to}
       className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-colors hover:bg-[#1a1a1a] group ${active ? 'font-bold' : ''}`}
     >
-      <Icon
-        size={24}
-        strokeWidth={active ? 2.5 : 2}
-        className="text-white shrink-0"
-      />
+      <div className="relative shrink-0">
+        <Icon
+          size={24}
+          strokeWidth={active ? 2.5 : 2}
+          className="text-white"
+        />
+        {badge > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
+      </div>
       <span className={`text-[15px] text-white hidden xl:block ${active ? 'font-bold' : 'font-normal'}`}>
         {label}
       </span>
@@ -67,6 +75,7 @@ function ThreadsIcon({ size = 24 }) {
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
+  const { unreadCount } = useNotifications()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -96,6 +105,7 @@ export default function Sidebar() {
             key={item.label}
             {...item}
             active={location.pathname === item.to}
+            badge={item.label === 'Notifications' ? unreadCount : 0}
           />
         ))}
 
