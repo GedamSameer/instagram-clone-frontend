@@ -104,7 +104,7 @@ export default function FeedReelCard({ reel: initialReel }) {
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
         <Link to={`/users/${reel.user?.id}`} className="shrink-0">
-          <Avatar username={reel.user?.username} size={32} />
+          <Avatar username={reel.user?.username} src={reel.user?.profile_picture_url} userId={reel.user?.id} size={32} />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

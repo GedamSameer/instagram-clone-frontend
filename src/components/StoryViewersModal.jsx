@@ -44,7 +44,7 @@ export default function StoryViewersModal({ storyId, onClose }) {
         ) : (
           data.viewers.map((v, i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-              <Avatar username={v.user.username} size={36} />
+              <Avatar username={v.user.username} src={v.user?.profile_picture_url} userId={v.user?.id} size={36} />
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">{v.user.username}</p>
                 <p className="text-[#a8a8a8] text-xs">{timeAgo(v.viewed_at)}</p>

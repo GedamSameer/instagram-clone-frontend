@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { NotificationsProvider } from './context/NotificationsContext'
+import { AvatarCacheProvider } from './context/AvatarCacheContext'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Sidebar, { MobileNav } from './components/Sidebar'
 import PostDetailModal from './components/PostDetailModal'
@@ -75,7 +76,9 @@ function App() {
   return (
     <AuthProvider>
       <NotificationsProvider>
-        <AppLayout />
+        <AvatarCacheProvider>
+          <AppLayout />
+        </AvatarCacheProvider>
       </NotificationsProvider>
     </AuthProvider>
   )

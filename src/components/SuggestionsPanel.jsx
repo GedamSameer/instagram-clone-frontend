@@ -31,7 +31,7 @@ function SuggestionRow({ suggUser, onFollowToggle }) {
   return (
     <div className="flex items-center gap-3 mb-3">
       <Link to={`/users/${suggUser.id}`} className="shrink-0">
-        <Avatar username={suggUser.username} size={32} />
+        <Avatar username={suggUser.username} src={suggUser.profile_picture_url} userId={suggUser.id} size={32} />
       </Link>
       <div className="flex-1 min-w-0">
         <Link to={`/users/${suggUser.id}`} className="block text-sm font-semibold text-white leading-tight truncate hover:opacity-80">
@@ -75,7 +75,7 @@ export default function SuggestionsPanel() {
       {user && (
         <div className="flex items-center gap-3 mb-6">
           <Link to={`/users/${user.id}`} className="shrink-0">
-            <Avatar username={user.username} size={44} />
+            <Avatar username={user.username} src={user.profile_picture_url} userId={user.id} size={44} />
           </Link>
           <div className="flex-1 min-w-0">
             <Link to={`/users/${user.id}`} className="block text-sm font-semibold text-white leading-tight truncate hover:opacity-80">

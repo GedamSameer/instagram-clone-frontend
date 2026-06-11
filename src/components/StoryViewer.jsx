@@ -233,7 +233,7 @@ export default function StoryViewer({
 
         {/* User header */}
         <div data-no-nav="" className="absolute top-5 left-0 right-0 flex items-center gap-2 px-3 pt-2 z-10">
-          <Avatar username={currentGroup.user.username} size={32} />
+          <Avatar username={currentGroup.user.username} src={currentGroup.user?.profile_picture_url} userId={currentGroup.user?.id} size={32} />
           <span className="text-white text-sm font-semibold drop-shadow">
             {currentGroup.user.username}
           </span>

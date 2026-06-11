@@ -167,7 +167,7 @@ export default function PostDetail() {
               {comments.map(comment => (
                 <div key={comment.id} className="flex items-start gap-3">
                   <Link to={`/users/${comment.user?.id}`} className="shrink-0">
-                    <Avatar username={comment.user?.username} size={32} />
+                    <Avatar username={comment.user?.username} src={comment.user?.profile_picture_url} userId={comment.user?.id} size={32} />
                   </Link>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white">

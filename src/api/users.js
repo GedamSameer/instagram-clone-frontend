@@ -9,3 +9,6 @@ export const getSuggestions = () => api.get('/api/users/search', { params: { q: 
 export const getFollowers = (id) => api.get(`/api/users/${id}/followers`)
 export const getFollowing = (id) => api.get(`/api/users/${id}/following`)
 export const getUserReels = (id) => api.get(`/api/users/${id}/reels`)
+export const getMutualFollowers = (id) => api.get(`/api/users/${id}/mutual-followers`)
+export const updateProfile = (data) => api.patch('/api/users/me', data)
+export const removeProfilePhoto = () => api.delete('/api/users/me/photo')

@@ -115,7 +115,7 @@ export default function Sidebar() {
             to={`/users/${user.id}`}
             className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-colors hover:bg-[#1a1a1a] ${location.pathname === `/users/${user.id}` ? 'font-bold' : ''}`}
           >
-            <Avatar username={user.username} size={24} className="shrink-0" />
+            <Avatar username={user.username} src={user.profile_picture_url || ''} userId={user.id} size={24} className="shrink-0" />
             <span className={`text-[15px] text-white hidden xl:block ${location.pathname === `/users/${user.id}` ? 'font-bold' : 'font-normal'}`}>
               Profile
             </span>
@@ -168,7 +168,7 @@ export function MobileNav() {
       ))}
       {user && (
         <Link to={`/users/${user.id}`}>
-          <Avatar username={user.username} size={24} />
+          <Avatar username={user.username} src={user.profile_picture_url || ''} userId={user.id} size={24} />
         </Link>
       )}
     </nav>

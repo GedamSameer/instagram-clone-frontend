@@ -38,7 +38,7 @@ function CommentRow({ comment, currentUserId, onDeleteComment, onReply, isReply 
   return (
     <div className="flex items-start gap-3 mb-3 group">
       <Link to={`/users/${comment.user?.id}`} className="shrink-0">
-        <Avatar username={comment.user?.username} size={isReply ? 28 : 32} />
+        <Avatar username={comment.user?.username} src={comment.user?.profile_picture_url} userId={comment.user?.id} size={isReply ? 28 : 32} />
       </Link>
 
       <div className="flex-1 min-w-0 flex gap-2">
@@ -157,7 +157,7 @@ export default function CommentsList({ post, comments, currentUserId, onDeleteCo
       {post?.caption && (
         <div className="flex items-start gap-3 mb-4">
           <Link to={`/users/${post.user?.id}`} className="shrink-0">
-            <Avatar username={post.user?.username} size={32} />
+            <Avatar username={post.user?.username} src={post.user?.profile_picture_url} userId={post.user?.id} size={32} />
           </Link>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white leading-snug">

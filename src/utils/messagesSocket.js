@@ -1,4 +1,4 @@
-const WS_URL = 'ws://localhost:8080/ws/messages'
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/messages`
 const INITIAL_DELAY_MS = 1000
 const MAX_DELAY_MS = 30000
 

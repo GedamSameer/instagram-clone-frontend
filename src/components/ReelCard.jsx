@@ -97,7 +97,7 @@ export default function ReelCard({ reel: initialReel, onBecomeActive }) {
                 className="shrink-0"
                 onClick={e => e.stopPropagation()}
               >
-                <Avatar username={reel.user?.username} size={32} />
+                <Avatar username={reel.user?.username} src={reel.user?.profile_picture_url} userId={reel.user?.id} size={32} />
               </Link>
               <Link
                 to={`/users/${reel.user?.id}`}

@@ -147,7 +147,7 @@ export default function PostDetailModal() {
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[#262626] shrink-0">
               <Link to={`/users/${post.user?.id}`} onClick={handleClose} className="shrink-0">
-                <Avatar username={post.user?.username} size={32} />
+                <Avatar username={post.user?.username} src={post.user?.profile_picture_url} userId={post.user?.id} size={32} />
               </Link>
               <Link
                 to={`/users/${post.user?.id}`}

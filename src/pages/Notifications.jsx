@@ -62,7 +62,7 @@ function NotifRow({ n, onClick }) {
       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1a1a1a] transition-colors text-left"
     >
       <div className="relative shrink-0">
-        <Avatar username={n.actor?.username} size={44} />
+        <Avatar username={n.actor?.username} src={n.actor?.profile_picture_url} userId={n.actor?.id} size={44} />
         {!n.is_read && (
           <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#0095f6] rounded-full border-2 border-black" />
         )}

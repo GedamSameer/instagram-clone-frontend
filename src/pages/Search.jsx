@@ -67,7 +67,7 @@ export default function Search() {
               key={u.id}
               className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-[#1a1a1a] transition-colors"
             >
-              <Avatar username={u.username} size={44} />
+              <Avatar username={u.username} src={u.profile_picture_url} userId={u.id} size={44} />
               <div>
                 <p className="text-sm font-semibold text-white">{u.username}</p>
                 <p className="text-xs text-[#a8a8a8]">{u.email || ''}</p>

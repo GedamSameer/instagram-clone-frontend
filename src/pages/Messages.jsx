@@ -209,7 +209,7 @@ export default function Messages() {
               >
                 <ArrowLeft size={22} />
               </button>
-              <Avatar username={activeConv.other_user?.username} size={44} />
+              <Avatar username={activeConv.other_user?.username} src={activeConv.other_user?.profile_picture_url} userId={activeConv.other_user?.id} size={44} />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-white text-sm truncate">
                   {activeConv.other_user?.username}
@@ -224,7 +224,7 @@ export default function Messages() {
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : messages.length === 0 ? (
-                <EmptyChatThread username={activeConv.other_user?.username} />
+                <EmptyChatThread username={activeConv.other_user?.username} userId={activeConv.other_user?.id} profilePictureUrl={activeConv.other_user?.profile_picture_url} />
               ) : (
                 <>
                   {messages.map(msg => (
@@ -317,10 +317,10 @@ function EmptyChatArea({ onNewMessage }) {
   )
 }
 
-function EmptyChatThread({ username }) {
+function EmptyChatThread({ username, userId, profilePictureUrl }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-      <Avatar username={username} size={80} />
+      <Avatar username={username} src={profilePictureUrl} userId={userId} size={80} />
       <p className="font-semibold text-white">{username}</p>
       <p className="text-sm text-[#a8a8a8]">No messages yet. Say hi! 👋</p>
     </div>

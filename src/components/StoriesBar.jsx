@@ -94,9 +94,13 @@ export default function StoriesBar() {
                     }}
                   >
                     <div className="rounded-full bg-black p-0.5 w-full h-full">
-                      <div className="w-full h-full rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-xl">
-                        {user.username?.[0]?.toUpperCase()}
-                      </div>
+                      {user.profile_picture_url ? (
+                        <img src={user.profile_picture_url} alt={user.username} className="w-full h-full rounded-full object-cover" draggable={false} />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-xl">
+                          {user.username?.[0]?.toUpperCase()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -105,9 +109,13 @@ export default function StoriesBar() {
                     className="rounded-full border-2 border-[#262626] overflow-hidden"
                     style={{ width: 62, height: 62 }}
                   >
-                    <div className="w-full h-full rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-xl">
-                      {user.username?.[0]?.toUpperCase()}
-                    </div>
+                    {user.profile_picture_url ? (
+                      <img src={user.profile_picture_url} alt={user.username} className="w-full h-full rounded-full object-cover" draggable={false} />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-xl">
+                        {user.username?.[0]?.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 )}
                 {!hasOwnStories && (
@@ -129,6 +137,8 @@ export default function StoriesBar() {
               <div key={group.user.id} onClick={() => setViewer({ groupIdx: gIdx })}>
                 <StoryAvatar
                   username={group.user.username}
+                  src={group.user?.profile_picture_url}
+                  userId={group.user?.id}
                   size={56}
                   showRing
                   viewed={!group.has_unseen}

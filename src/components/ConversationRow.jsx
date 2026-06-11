@@ -19,7 +19,7 @@ export default function ConversationRow({ conv, active, currentUserId, onClick }
         ${active ? 'bg-[#1a1a1a]' : 'hover:bg-[#121212]'}`}
     >
       <div className="shrink-0">
-        <Avatar username={other?.username} size={56} />
+        <Avatar username={other?.username} src={other?.profile_picture_url} userId={other?.id} size={56} />
       </div>
 
       <div className="flex-1 min-w-0">

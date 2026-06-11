@@ -55,7 +55,7 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
         <Link to={`/users/${post.user?.id}`} className="shrink-0">
-          <Avatar username={post.user?.username} size={32} />
+          <Avatar username={post.user?.username} src={post.user?.profile_picture_url} userId={post.user?.id} size={32} />
         </Link>
         <div className="flex-1 min-w-0">
           <Link to={`/users/${post.user?.id}`} className="text-sm font-semibold text-white hover:opacity-80">
