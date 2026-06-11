@@ -1,0 +1,11 @@
+import api from './client'
+
+export const getProfile = (id) => api.get(`/api/users/${id}`)
+export const getUserPosts = (id) => api.get(`/api/users/${id}/posts`)
+export const followUser = (id) => api.post(`/api/users/${id}/follow`)
+export const unfollowUser = (id) => api.delete(`/api/users/${id}/follow`)
+export const searchUsers = (q) => api.get('/api/users/search', { params: { q } })
+export const getSuggestions = () => api.get('/api/users/search', { params: { q: '' } })
+export const getFollowers = (id) => api.get(`/api/users/${id}/followers`)
+export const getFollowing = (id) => api.get(`/api/users/${id}/following`)
+export const getUserReels = (id) => api.get(`/api/users/${id}/reels`)
