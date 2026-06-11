@@ -12,6 +12,7 @@ import ReelDetail from './pages/ReelDetail'
 import Reels from './pages/Reels'
 import Profile from './pages/Profile'
 import Search from './pages/Search'
+import Messages from './pages/Messages'
 
 const AUTH_PATHS = ['/login', '/register']
 
@@ -44,7 +45,7 @@ function AppLayout() {
           <Route path="/users/:id" element={<Profile />} />
           <Route path="/search" element={<Search />} />
           <Route path="/explore" element={<PlaceholderPage label="Explore" />} />
-          <Route path="/messages" element={<PlaceholderPage label="Messages" />} />
+          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
           <Route path="/notifications" element={<PlaceholderPage label="Notifications" />} />
         </Routes>
 
