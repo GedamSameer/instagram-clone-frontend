@@ -15,7 +15,7 @@ export default function Avatar({ username, size = 32, className = '' }) {
   const style = { width: size, height: size, fontSize: size * 0.38, flexShrink: 0 }
   return (
     <div
-      className={`rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-semibold ${className}`}
+      className={`rounded-full bg-linear-to-br ${color} flex items-center justify-center text-white font-semibold ${className}`}
       style={style}
     >
       {username?.[0]?.toUpperCase()}
@@ -23,22 +23,25 @@ export default function Avatar({ username, size = 32, className = '' }) {
   )
 }
 
-export function StoryAvatar({ username, size = 56, showRing = true }) {
+const STORY_GRADIENT = 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+const STORY_VIEWED = '#4d4d4d'
+
+export function StoryAvatar({ username, size = 56, showRing = true, viewed = false }) {
   const color = getColor(username)
   return (
     <div className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0">
       {showRing ? (
         <div
-          className="rounded-full p-[2px]"
+          className="rounded-full p-0.5"
           style={{
-            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+            background: viewed ? STORY_VIEWED : STORY_GRADIENT,
             width: size + 6,
             height: size + 6,
           }}
         >
-          <div className="rounded-full bg-black p-[2px] w-full h-full">
+          <div className="rounded-full bg-black p-0.5 w-full h-full">
             <div
-              className={`rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-semibold w-full h-full`}
+              className={`rounded-full bg-linear-to-br ${color} flex items-center justify-center text-white font-semibold w-full h-full`}
               style={{ fontSize: size * 0.38 }}
             >
               {username?.[0]?.toUpperCase()}
@@ -47,7 +50,7 @@ export function StoryAvatar({ username, size = 56, showRing = true }) {
         </div>
       ) : (
         <div
-          className={`rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-semibold border-2 border-[#262626]`}
+          className={`rounded-full bg-linear-to-br ${color} flex items-center justify-center text-white font-semibold border-2 border-[#262626]`}
           style={{ width: size, height: size, fontSize: size * 0.38 }}
         >
           {username?.[0]?.toUpperCase()}

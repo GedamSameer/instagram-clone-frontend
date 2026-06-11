@@ -1,16 +1,19 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ImagePlus, X } from 'lucide-react'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import { createPost } from '../api/posts'
 import { useAuth } from '../auth/AuthContext'
 import ReelUploadForm from '../components/ReelUploadForm'
+import StoryUploadForm from '../components/StoryUploadForm'
 
 export default function Create() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileInputRef = useRef(null)
 
+  const [storyMode, setStoryMode] = useState(location.state?.type === 'story')
   const [file, setFile] = useState(null)
   const [fileType, setFileType] = useState(null) // 'image' | 'video'
   const [preview, setPreview] = useState(null)
@@ -62,7 +65,10 @@ export default function Create() {
             </button>
           )}
           <span className="text-white font-semibold text-sm mx-auto">
-            {!file ? 'Create new post' : fileType === 'video' ? 'New reel' : 'New post'}
+            {!file
+              ? storyMode ? 'New story' : 'Create new post'
+              : storyMode ? 'New story'
+              : fileType === 'video' ? 'New reel' : 'New post'}
           </span>
           {!file && (
             <button onClick={() => navigate(-1)} className="text-white hover:text-[#a8a8a8] transition-colors">
@@ -74,12 +80,31 @@ export default function Create() {
         {/* Body */}
         {!file ? (
           /* File picker */
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
             <div className="p-5 bg-[#262626] rounded-full">
               <ImagePlus size={40} className="text-white" strokeWidth={1} />
             </div>
             <p className="text-white text-xl font-light">Drag photos and videos here</p>
-            <p className="text-[#a8a8a8] text-sm">Share photos or short videos as reels</p>
+            {/* Type picker */}
+            <div className="flex gap-2">
+              {[
+                { label: 'Post / Reel', active: !storyMode },
+                { label: 'Story', active: storyMode },
+              ].map(({ label, active }) => (
+                <button
+                  key={label}
+                  onClick={() => setStoryMode(label === 'Story')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    active ? 'bg-white text-black' : 'bg-[#262626] text-white hover:bg-[#363636]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[#a8a8a8] text-sm">
+              {storyMode ? 'Disappears after 24 hours' : 'Share photos or short videos as reels'}
+            </p>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-6 py-2 bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold rounded-lg transition-colors"
@@ -93,6 +118,11 @@ export default function Create() {
               className="hidden"
               onChange={handleFileChange}
             />
+          </div>
+        ) : storyMode ? (
+          /* Story upload form */
+          <div style={{ minHeight: 400 }}>
+            <StoryUploadForm file={file} fileType={fileType} onBack={handleBack} />
           </div>
         ) : fileType === 'video' ? (
           /* Video → Reel upload form */

@@ -20,6 +20,12 @@ html, body {
   display: none;
 }
 
+/* Story progress bar animation */
+@keyframes story-progress {
+  from { width: 0% }
+  to   { width: 100% }
+}
+
 /* Thin scrollbar for supported browsers */
 ::-webkit-scrollbar {
   width: 4px;

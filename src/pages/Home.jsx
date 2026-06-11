@@ -33,7 +33,7 @@ export default function Home() {
     <div className="flex justify-center gap-8 px-4 pt-8 pb-20 md:pb-8 min-h-screen bg-black">
       {/* Feed column */}
       <div className="w-full max-w-117.5 shrink-0">
-        {!loading && <StoriesBar feedItems={feedItems} />}
+        <StoriesBar />
 
         {loading ? (
           <div className="flex flex-col gap-3 mt-4">

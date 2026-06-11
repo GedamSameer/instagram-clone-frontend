@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
-import { Grid3x3, Clapperboard, Bookmark, Play } from 'lucide-react'
+import { Grid3x3, Clapperboard, Bookmark } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { getProfile, getUserPosts, followUser, unfollowUser, getUserReels } from '../api/users'
 import { getSavedPosts } from '../api/posts'
 import { getSavedReels } from '../api/reels'
+import { getUserStories } from '../api/stories'
 import Avatar from '../components/Avatar'
 import FollowersFollowingModal from '../components/FollowersFollowingModal'
 import ReelGrid from '../components/ReelGrid'
 import ReelThumbnailCard from '../components/ReelThumbnailCard'
+import StoryViewer from '../components/StoryViewer'
 
 export default function Profile() {
   const { id } = useParams()
@@ -18,12 +20,14 @@ export default function Profile() {
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [reels, setReels] = useState([])
+  const [stories, setStories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [following, setFollowing] = useState(false)
   const [followersCount, setFollowersCount] = useState(0)
   const [activeTab, setActiveTab] = useState('posts')
   const [modal, setModal] = useState(null)
+  const [storyViewerOpen, setStoryViewerOpen] = useState(false)
 
   // Saved tab state
   const [savedPosts, setSavedPosts] = useState([])
@@ -36,13 +40,19 @@ export default function Profile() {
     setError(null)
     setActiveTab('posts')
     setSavedLoaded(false)
-    Promise.all([getProfile(id), getUserPosts(id), getUserReels(id)])
-      .then(([profileRes, postsRes, reelsRes]) => {
+    Promise.all([
+      getProfile(id),
+      getUserPosts(id),
+      getUserReels(id),
+      getUserStories(id).catch(() => ({ data: { stories: [] } })),
+    ])
+      .then(([profileRes, postsRes, reelsRes, storiesRes]) => {
         setProfile(profileRes.data)
         setFollowing(profileRes.data.is_following)
         setFollowersCount(profileRes.data.followers_count)
         setPosts(postsRes.data.posts || [])
         setReels(reelsRes.data.reels || [])
+        setStories(storiesRes.data.stories || [])
       })
       .catch(() => setError('User not found'))
       .finally(() => setLoading(false))
@@ -90,10 +100,6 @@ export default function Profile() {
     navigate(`/posts/${post.id}`, { state: { background: location } })
   }
 
-  const openReelPage = (reel) => {
-    navigate(`/reels/${reel.id}`, { state: { background: location } })
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
@@ -134,18 +140,20 @@ export default function Profile() {
         {/* Profile header */}
         <div className="flex items-start gap-8 md:gap-16 mb-10">
           <div className="shrink-0">
-            <div
-              className="rounded-full p-0.75"
+            <button
+              className="rounded-full p-0.75 block"
               style={{
-                background: isOwnProfile
-                  ? '#262626'
-                  : 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                background: stories.length > 0
+                  ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                  : '#262626',
+                cursor: stories.length > 0 ? 'pointer' : 'default',
               }}
+              onClick={() => stories.length > 0 && setStoryViewerOpen(true)}
             >
               <div className="rounded-full bg-black p-0.75">
                 <Avatar username={profile.username} size={77} />
               </div>
-            </div>
+            </button>
           </div>
 
           <div className="flex flex-col gap-4 flex-1 min-w-0">
@@ -347,6 +355,22 @@ export default function Profile() {
           userId={id}
           type={modal}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {storyViewerOpen && stories.length > 0 && (
+        <StoryViewer
+          groups={[{ user: profile, stories, has_unseen: true }]}
+          initialGroupIdx={0}
+          initialStoryIdx={0}
+          onClose={() => setStoryViewerOpen(false)}
+          onStoryDeleted={(storyId, groupId) =>
+            setStories(prev =>
+              groupId
+                ? prev.filter(s => s.story_group_id !== groupId)
+                : prev.filter(s => s.id !== storyId)
+            )
+          }
         />
       )}
     </div>
