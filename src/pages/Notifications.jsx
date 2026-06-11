@@ -1,35 +1,43 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { UserCheck } from 'lucide-react'
 import { getNotifications, markAllNotificationsRead } from '../api/notifications'
+import { getFollowRequests } from '../api/followRequests'
 import { useNotifications } from '../context/NotificationsContext'
 import { timeAgo } from '../utils/time'
 import Avatar from '../components/Avatar'
 
 function getNotifText(n) {
   switch (n.type) {
-    case 'follow':          return 'started following you.'
-    case 'post_like':       return 'liked your post.'
-    case 'post_comment':    return 'commented on your post.'
-    case 'reel_like':       return 'liked your reel.'
-    case 'reel_comment':    return 'commented on your reel.'
-    case 'comment_like':    return 'liked your comment.'
-    case 'comment_reply':   return 'replied to your comment.'
-    case 'message_request': return 'sent you a message.'
-    default:                return 'interacted with you.'
+    case 'follow':                    return 'started following you.'
+    case 'follow_request':            return 'requested to follow you.'
+    case 'follow_request_accepted':   return 'accepted your follow request.'
+    case 'post_like':                 return 'liked your post.'
+    case 'post_comment':              return 'commented on your post.'
+    case 'reel_like':                 return 'liked your reel.'
+    case 'reel_comment':              return 'commented on your reel.'
+    case 'comment_like':              return 'liked your comment.'
+    case 'comment_reply':             return 'replied to your comment.'
+    case 'message_request':           return 'sent you a message request.'
+    case 'message_request_accepted':  return 'accepted your message request.'
+    default:                          return 'interacted with you.'
   }
 }
 
 function getNotifLink(n) {
   switch (n.type) {
-    case 'follow':          return `/users/${n.actor?.id}`
+    case 'follow':
+    case 'follow_request_accepted':   return `/users/${n.actor?.id}`
+    case 'follow_request':            return '/follow-requests'
     case 'post_like':
-    case 'post_comment':    return `/posts/${n.entity_id}`
+    case 'post_comment':              return `/posts/${n.entity_id}`
     case 'reel_like':
-    case 'reel_comment':    return `/reels/${n.entity_id}`
+    case 'reel_comment':              return `/reels/${n.entity_id}`
     case 'comment_like':
-    case 'comment_reply':   return n.entity_id ? `/posts/${n.entity_id}` : '/'
-    case 'message_request': return '/messages'
-    default:                return '/'
+    case 'comment_reply':             return n.entity_id ? `/posts/${n.entity_id}` : '/'
+    case 'message_request':
+    case 'message_request_accepted':  return '/messages'
+    default:                          return '/'
   }
 }
 
@@ -91,6 +99,7 @@ export default function Notifications() {
   const { setUnreadCount } = useNotifications()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [followRequestCount, setFollowRequestCount] = useState(0)
 
   useEffect(() => {
     getNotifications()
@@ -100,6 +109,10 @@ export default function Notifications() {
 
     markAllNotificationsRead()
       .then(() => setUnreadCount(0))
+      .catch(() => {})
+
+    getFollowRequests()
+      .then(res => setFollowRequestCount((res.data.requests || []).length))
       .catch(() => {})
   }, [])
 
@@ -118,6 +131,22 @@ export default function Notifications() {
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
         </div>
+      )}
+
+      {/* Follow requests shortcut */}
+      {followRequestCount > 0 && (
+        <Link
+          to="/follow-requests"
+          className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a1a1a] transition-colors border-b border-[#262626]"
+        >
+          <div className="w-11 h-11 rounded-full bg-[#262626] flex items-center justify-center shrink-0">
+            <UserCheck size={22} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white font-semibold">Follow Requests</p>
+            <p className="text-xs text-[#a8a8a8]">{followRequestCount} {followRequestCount === 1 ? 'request' : 'requests'}</p>
+          </div>
+        </Link>
       )}
 
       {!loading && notifications.length === 0 && (

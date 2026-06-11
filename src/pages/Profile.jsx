@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import {
   Grid3x3, Clapperboard, Bookmark, Settings, MoreHorizontal,
-  Plus, Heart, MessageCircle, Play, ChevronDown, Camera,
+  Plus, Heart, MessageCircle, Play, ChevronDown, Camera, Lock,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import {
   getProfile, getUserPosts, followUser, unfollowUser, getUserReels,
-  getMutualFollowers, updateProfile, removeProfilePhoto,
+  getMutualFollowers, updateProfile, removeProfilePhoto, updatePrivacy,
 } from '../api/users'
 import { getSavedPosts } from '../api/posts'
 import { getSavedReels } from '../api/reels'
@@ -252,9 +252,12 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [following, setFollowing] = useState(false)
+  const [hasRequested, setHasRequested] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
   const [followersCount, setFollowersCount] = useState(0)
   const [activeTab, setActiveTab] = useState('posts')
   const [modal, setModal] = useState(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [storyViewerOpen, setStoryViewerOpen] = useState(false)
   const [picModalOpen, setPicModalOpen] = useState(false)
   const [picPreviewOpen, setPicPreviewOpen] = useState(false)
@@ -295,6 +298,8 @@ export default function Profile() {
       .then(([profileRes, postsRes, reelsRes, storiesRes]) => {
         setProfile(profileRes.data)
         setFollowing(profileRes.data.is_following)
+        setHasRequested(profileRes.data.has_requested ?? false)
+        setIsPrivate(profileRes.data.is_private ?? false)
         setFollowersCount(profileRes.data.followers_count)
         setPosts(postsRes.data.posts || [])
         setReels(reelsRes.data.reels || [])
@@ -329,16 +334,34 @@ export default function Profile() {
 
   const handleFollow = async () => {
     try {
-      if (following) {
+      if (following || hasRequested) {
+        // Unfollow or cancel follow request
         const res = await unfollowUser(id)
         setFollowing(false)
+        setHasRequested(false)
         setFollowersCount(res.data.followers_count)
       } else {
         const res = await followUser(id)
-        setFollowing(true)
+        if (res.data.status === 'requested') {
+          setHasRequested(true)
+          setFollowing(false)
+        } else {
+          setFollowing(true)
+          setHasRequested(false)
+        }
         setFollowersCount(res.data.followers_count)
       }
     } catch {}
+  }
+
+  const handleTogglePrivacy = async () => {
+    const newValue = !isPrivate
+    try {
+      setIsPrivate(newValue)
+      await updatePrivacy(newValue)
+    } catch {
+      setIsPrivate(!newValue) // rollback
+    }
   }
 
   const handleAvatarClick = () => {
@@ -424,6 +447,9 @@ export default function Profile() {
       <p className="text-red-400">{error}</p>
     </div>
   )
+
+  // Whether the current viewer can see this profile's content
+  const canViewContent = isOwnProfile || !isPrivate || following
 
   // ── Derived data ───────────────────────────────────────────────────────────
 
@@ -550,7 +576,10 @@ export default function Profile() {
                   <button className="bg-[#363636] hover:bg-[#4d4d4d] text-white text-sm font-semibold px-4 py-[7px] rounded-lg transition-colors">
                     View archive
                   </button>
-                  <button className="w-9 h-9 flex items-center justify-center text-white hover:bg-[#1a1a1a] rounded-full transition-colors">
+                  <button
+                    onClick={() => setSettingsOpen(true)}
+                    className="w-9 h-9 flex items-center justify-center text-white hover:bg-[#1a1a1a] rounded-full transition-colors"
+                  >
                     <Settings size={22} />
                   </button>
                 </>
@@ -561,15 +590,19 @@ export default function Profile() {
                     className={`flex items-center gap-1 text-sm font-semibold px-4 py-[7px] rounded-lg transition-colors ${
                       following
                         ? 'bg-[#363636] hover:bg-[#4d4d4d] text-white'
-                        : 'bg-[#0095f6] hover:bg-[#1877f2] text-white'
+                        : hasRequested
+                          ? 'bg-[#363636] hover:bg-[#4d4d4d] text-white'
+                          : 'bg-[#0095f6] hover:bg-[#1877f2] text-white'
                     }`}
                   >
                     {following ? (
                       <>Following <ChevronDown size={14} /></>
+                    ) : hasRequested ? (
+                      'Requested'
                     ) : 'Follow'}
                   </button>
                   <button
-                    onClick={() => navigate('/messages')}
+                    onClick={() => navigate('/messages', { state: { openUserId: profile.id } })}
                     className="bg-[#363636] hover:bg-[#4d4d4d] text-white text-sm font-semibold px-4 py-[7px] rounded-lg transition-colors"
                   >
                     Message
@@ -715,8 +748,21 @@ export default function Profile() {
           ))}
         </div>
 
+        {/* ── Private account lock banner ── */}
+        {!canViewContent && (
+          <div className="border-t border-[#262626] flex flex-col items-center justify-center py-16 gap-4 text-center px-4">
+            <div className="w-16 h-16 border-2 border-white rounded-full flex items-center justify-center">
+              <Lock size={28} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-[18px] font-semibold text-white mb-1">This Account is Private</h3>
+              <p className="text-sm text-[#a8a8a8]">Follow this account to see their photos and videos.</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Posts Tab (mixed grid) ── */}
-        {activeTab === 'posts' && (
+        {activeTab === 'posts' && canViewContent && (
           mixedContent.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-4">
               <Camera size={56} strokeWidth={1.2} className="text-white" />
@@ -752,7 +798,7 @@ export default function Profile() {
         )}
 
         {/* ── Reels Tab ── */}
-        {activeTab === 'reels' && (
+        {activeTab === 'reels' && canViewContent && (
           reels.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-4">
               <Clapperboard size={56} strokeWidth={1.2} className="text-white" />
@@ -913,6 +959,14 @@ export default function Profile() {
         </div>
       )}
 
+      {settingsOpen && (
+        <SettingsModal
+          isPrivate={isPrivate}
+          onTogglePrivacy={handleTogglePrivacy}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
       {/* Hidden file input for profile picture upload */}
       <input
         ref={fileInputRef}
@@ -921,6 +975,63 @@ export default function Profile() {
         className="hidden"
         onChange={handleFileSelected}
       />
+    </div>
+  )
+}
+
+// ── Settings modal ─────────────────────────────────────────────────────────────
+
+function SettingsModal({ isPrivate, onTogglePrivacy, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#262626] rounded-2xl w-full max-w-sm overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="py-4 px-4 text-center border-b border-[#363636]">
+          <p className="text-white font-semibold text-base">Settings</p>
+        </div>
+
+        {/* Private account row */}
+        <div className="flex items-center justify-between px-4 py-4">
+          <span className="text-white text-sm">Private account</span>
+          {/* Toggle switch */}
+          <button
+            role="switch"
+            aria-checked={isPrivate}
+            onClick={onTogglePrivacy}
+            className={`relative w-12 h-7 rounded-full transition-colors duration-200 focus:outline-none ${
+              isPrivate ? 'bg-[#0095f6]' : 'bg-[#4d4d4d]'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
+                isPrivate ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Cancel */}
+        <div className="border-t border-[#363636]">
+          <button
+            onClick={onClose}
+            className="w-full py-4 text-white text-sm hover:bg-[#1a1a1a] transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

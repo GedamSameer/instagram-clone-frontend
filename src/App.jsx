@@ -16,6 +16,7 @@ import Profile from './pages/Profile'
 import Search from './pages/Search'
 import Messages from './pages/Messages'
 import Notifications from './pages/Notifications'
+import FollowRequests from './pages/FollowRequests'
 
 const AUTH_PATHS = ['/login', '/register']
 
@@ -50,6 +51,7 @@ function AppLayout() {
           <Route path="/explore" element={<PlaceholderPage label="Explore" />} />
           <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/follow-requests" element={<ProtectedRoute><FollowRequests /></ProtectedRoute>} />
         </Routes>
 
         {/* Modal overlay — rendered on top when navigated with background state */}

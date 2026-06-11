@@ -1,59 +1,113 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, MessageCircle, PenSquare } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { ArrowLeft, MessageCircle, PenSquare, Check, X } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import { getConversations, getMessages, sendMessage } from '../api/messages'
+import {
+  getConversations, getMessageRequests, getMessages, sendMessage,
+  acceptMessageRequest, rejectMessageRequest, createConversation,
+} from '../api/messages'
 import { createMessagesSocket } from '../utils/messagesSocket'
-import ConversationRow from '../components/ConversationRow'
 import MessageBubble from '../components/MessageBubble'
 import MessageInput from '../components/MessageInput'
 import NewMessageModal from '../components/NewMessageModal'
 import Avatar from '../components/Avatar'
+import { timeAgo } from '../utils/time'
 
 export default function Messages() {
   const { user } = useAuth()
+  const location = useLocation()
 
-  const [conversations, setConversations] = useState([])
+  const [conversations, setConversations] = useState([])   // accepted + sent requests
+  const [requests, setRequests] = useState([])              // received requests
   const [activeConvId, setActiveConvId] = useState(null)
   const [messages, setMessages] = useState([])
   const [convsLoading, setConvsLoading] = useState(true)
   const [msgsLoading, setMsgsLoading] = useState(false)
   const [showNewMsg, setShowNewMsg] = useState(false)
-  // 'list' | 'chat' — controls which panel is visible on narrow screens
+  const [activeTab, setActiveTab] = useState('messages')
+
+  // 'list' | 'chat' — narrow screen navigation
   const [mobileView, setMobileView] = useState('list')
 
+  // Is the open conversation a received request (recipient side)?
+  const [activeConvIsRequest, setActiveConvIsRequest] = useState(false)
+  // Has the current user (sender) already sent their one allowed message and is now waiting?
+  const [awaitingApproval, setAwaitingApproval] = useState(false)
+
   const messagesEndRef = useRef(null)
-  // Keep a ref so the WebSocket handler always reads the latest activeConvId
   const activeConvIdRef = useRef(null)
-  // Distinguish initial load (instant scroll) from new message (smooth scroll)
   const isInitialLoad = useRef(false)
 
   useEffect(() => {
     activeConvIdRef.current = activeConvId
   }, [activeConvId])
 
-  // ── Load conversation list ──────────────────────────────────────────────
+  // ── Load lists ──────────────────────────────────────────────────────────
   useEffect(() => {
-    getConversations()
-      .then(res => setConversations(res.data.conversations || []))
+    Promise.all([getConversations(), getMessageRequests()])
+      .then(([convsRes, reqsRes]) => {
+        setConversations(convsRes.data.conversations || [])
+        setRequests(reqsRes.data.conversations || [])
+      })
       .catch(() => {})
       .finally(() => setConvsLoading(false))
   }, [])
 
-  // ── Load messages when active conversation changes ──────────────────────
+  // ── Auto-open conversation when arriving from Profile "Message" button ──
+  useEffect(() => {
+    const openUserId = location.state?.openUserId
+    if (!openUserId || convsLoading) return
+
+    // Check if we already have a conversation with this user
+    const all = [...conversations, ...requests]
+    const existing = all.find(c => c.other_user?.id === openUserId)
+    if (existing) {
+      handleSelectConv(existing)
+      return
+    }
+
+    // Create a new conversation
+    createConversation(openUserId)
+      .then(res => handleConvCreated(res.data.conversation))
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.openUserId, convsLoading])
+
+  // ── Load messages + determine awaiting-approval state ───────────────────
   useEffect(() => {
     if (!activeConvId) {
       setMessages([])
+      setActiveConvIsRequest(false)
+      setAwaitingApproval(false)
       return
     }
     isInitialLoad.current = true
     setMsgsLoading(true)
+
+    // Find the active conversation from either list
+    const conv = [...conversations, ...requests].find(c => c.id === activeConvId)
+    const isReceivedRequest = !!(conv && conv.status === 'request' && conv.requester_id !== user?.id)
+    const isSentRequest    = !!(conv && conv.status === 'request' && conv.requester_id === user?.id)
+
+    setActiveConvIsRequest(isReceivedRequest)
+
     getMessages(activeConvId)
-      .then(res => setMessages(res.data.messages || []))
+      .then(res => {
+        const msgs = res.data.messages || []
+        setMessages(msgs)
+        // Show "awaiting approval" only if sender has already sent at least one message
+        if (isSentRequest) {
+          const hasSent = msgs.some(m => m.sender_id === user?.id)
+          setAwaitingApproval(hasSent)
+        } else {
+          setAwaitingApproval(false)
+        }
+      })
       .catch(() => setMessages([]))
       .finally(() => setMsgsLoading(false))
-  }, [activeConvId])
+  }, [activeConvId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-scroll to bottom ───────────────────────────────────────────────
+  // ── Auto-scroll ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (messages.length === 0) return
     const behavior = isInitialLoad.current ? 'instant' : 'smooth'
@@ -61,48 +115,77 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior })
   }, [messages])
 
-  // ── WebSocket (singleton, lives for the page lifetime) ──────────────────
+  // ── WebSocket ────────────────────────────────────────────────────────────
   useEffect(() => {
     const socket = createMessagesSocket({
       onMessage(data) {
         if (data.type === 'new_message') {
           const { conversation_id: convId, message: msg } = data
-
-          // Add to thread if it's the active conversation; deduplicate by id
           if (convId === activeConvIdRef.current) {
-            setMessages(prev =>
-              prev.some(m => m.id === msg.id) ? prev : [...prev, msg]
-            )
+            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
           }
+          const patchLast = (list) =>
+            list.map(c => c.id === convId ? { ...c, last_message: msg } : c)
+          setConversations(prev => sortConvs(patchLast(prev)))
+          setRequests(prev => sortConvs(patchLast(prev)))
+        }
 
-          // Bubble up last_message in list and re-sort
-          setConversations(prev => {
-            const updated = prev.map(c =>
-              c.id === convId ? { ...c, last_message: msg } : c
-            )
-            return sortConvs(updated)
-          })
+        if (data.type === 'new_conversation_request') {
+          // A new message request arrived — add it to the Requests list if not already there
+          const conv = data.conversation
+          setRequests(prev =>
+            prev.some(c => c.id === conv.id) ? prev : sortConvs([conv, ...prev])
+          )
         }
 
         if (data.type === 'message_deleted') {
           const { conversation_id: convId, message: msg } = data
           if (convId === activeConvIdRef.current) {
-            setMessages(prev => prev.map(m => (m.id === msg.id ? msg : m)))
+            setMessages(prev => prev.map(m => m.id === msg.id ? msg : m))
           }
-          setConversations(prev =>
-            prev.map(c =>
+          const patchLast = (list) =>
+            list.map(c =>
               c.id === convId && c.last_message?.id === msg.id
-                ? { ...c, last_message: msg }
-                : c
+                ? { ...c, last_message: msg } : c
             )
-          )
+          setConversations(prev => patchLast(prev))
+          setRequests(prev => patchLast(prev))
+        }
+
+        if (data.type === 'conversation_accepted') {
+          const { conversation_id: convId } = data
+
+          // Move from Requests → Messages (for recipient B, via WS)
+          // Also updates status for sender A already in Messages list
+          setRequests(prev => {
+            const conv = prev.find(c => c.id === convId)
+            if (conv) {
+              // Only add to conversations if not already there
+              setConversations(existing =>
+                existing.some(c => c.id === convId)
+                  ? existing.map(c => c.id === convId ? { ...c, status: 'accepted' } : c)
+                  : sortConvs([...existing, { ...conv, status: 'accepted' }])
+              )
+            } else {
+              // Sender A side: just update status in conversations list
+              setConversations(existing =>
+                existing.map(c => c.id === convId ? { ...c, status: 'accepted' } : c)
+              )
+            }
+            return prev.filter(c => c.id !== convId)
+          })
+
+          if (activeConvIdRef.current === convId) {
+            setActiveConvIsRequest(false)
+            setAwaitingApproval(false)
+          }
         }
       },
     })
     return () => socket.disconnect()
   }, [])
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────
   function sortConvs(list) {
     return [...list].sort((a, b) => {
       const at = a.last_message?.created_at || a.created_at || ''
@@ -111,41 +194,74 @@ export default function Messages() {
     })
   }
 
-  const activeConv = conversations.find(c => c.id === activeConvId) ?? null
+  const activeConv = [...conversations, ...requests].find(c => c.id === activeConvId) ?? null
+  const displayList = activeTab === 'messages' ? conversations : requests
 
-  const handleSelectConv = (convId) => {
-    setActiveConvId(convId)
+  const handleSelectConv = (conv) => {
+    setActiveConvId(conv.id)
     setMobileView('chat')
+    // Reset both flags — useEffect above will set them correctly after messages load
+    setActiveConvIsRequest(false)
+    setAwaitingApproval(false)
   }
 
   const handleSend = async (text) => {
     if (!activeConvId) return
-    const res = await sendMessage(activeConvId, text)
-    const msg = res.data.message
-    // Add optimistically; WebSocket echo will be deduplicated
-    setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]))
-    setConversations(prev => {
-      const updated = prev.map(c =>
-        c.id === activeConvId ? { ...c, last_message: msg } : c
+    try {
+      const res = await sendMessage(activeConvId, text)
+      const msg = res.data.message
+      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+      setConversations(prev =>
+        sortConvs(prev.map(c => c.id === activeConvId ? { ...c, last_message: msg } : c))
       )
-      return sortConvs(updated)
-    })
+      // After first message sent in a request conv, lock the input
+      if (activeConv?.status === 'request' && activeConv?.requester_id === user?.id) {
+        setAwaitingApproval(true)
+      }
+    } catch (err) {
+      if (err?.response?.status === 403) {
+        setAwaitingApproval(true)
+      }
+    }
   }
 
   const handleConvCreated = (conv) => {
     setShowNewMsg(false)
-    setConversations(prev => {
-      if (prev.some(c => c.id === conv.id)) return prev
-      return sortConvs([conv, ...prev])
-    })
-    handleSelectConv(conv.id)
+    setConversations(prev =>
+      prev.some(c => c.id === conv.id) ? prev : sortConvs([conv, ...prev])
+    )
+    setActiveTab('messages')
+    handleSelectConv(conv)
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  const handleAcceptRequest = async () => {
+    if (!activeConvId) return
+    try {
+      await acceptMessageRequest(activeConvId)
+      // Full refresh to avoid duplicates from stale state
+      const [convsRes, reqsRes] = await Promise.all([getConversations(), getMessageRequests()])
+      setConversations(convsRes.data.conversations || [])
+      setRequests(reqsRes.data.conversations || [])
+      setActiveConvIsRequest(false)
+      setActiveTab('messages')
+    } catch {}
+  }
+
+  const handleRejectRequest = async () => {
+    if (!activeConvId) return
+    try {
+      await rejectMessageRequest(activeConvId)
+      setRequests(prev => prev.filter(c => c.id !== activeConvId))
+      setActiveConvId(null)
+      setMobileView('list')
+    } catch {}
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen overflow-hidden bg-black">
 
-      {/* ── Left panel: conversation list ── */}
+      {/* ── Left panel ── */}
       <div
         className={`flex flex-col border-r border-[#262626] shrink-0
           w-full md:w-80 xl:w-96
@@ -165,35 +281,49 @@ export default function Messages() {
 
         {/* Tab strip */}
         <div className="flex border-b border-[#262626] shrink-0">
-          <button className="flex-1 py-3 text-sm font-semibold text-white border-b-2 border-white">
-            Messages
-          </button>
-          <button className="flex-1 py-3 text-sm text-[#a8a8a8] hover:text-white transition-colors">
-            Requests
-          </button>
+          {['messages', 'requests'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${
+                activeTab === tab
+                  ? 'text-white border-b-2 border-white'
+                  : 'text-[#a8a8a8] hover:text-white'
+              }`}
+            >
+              {tab}
+              {tab === 'requests' && requests.length > 0 && (
+                <span className="absolute top-2 right-4 min-w-4 h-4 bg-[#0095f6] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                  {requests.length > 9 ? '9+' : requests.length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* List body */}
+        {/* List */}
         <div className="flex-1 overflow-y-auto">
           {convsLoading && <ConvListSkeleton />}
 
-          {!convsLoading && conversations.length === 0 && (
-            <EmptyConvList onNewMessage={() => setShowNewMsg(true)} />
+          {!convsLoading && displayList.length === 0 && (
+            activeTab === 'messages'
+              ? <EmptyConvList onNewMessage={() => setShowNewMsg(true)} />
+              : <EmptyRequests />
           )}
 
-          {!convsLoading && conversations.map(conv => (
-            <ConversationRow
+          {!convsLoading && displayList.map(conv => (
+            <ConvRow
               key={conv.id}
               conv={conv}
               active={conv.id === activeConvId}
               currentUserId={user?.id}
-              onClick={() => handleSelectConv(conv.id)}
+              onClick={() => handleSelectConv(conv)}
             />
           ))}
         </div>
       </div>
 
-      {/* ── Right panel: chat area ── */}
+      {/* ── Right panel ── */}
       <div
         className={`flex-1 flex flex-col min-w-0
           ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}
@@ -203,28 +333,69 @@ export default function Messages() {
             {/* Chat header */}
             <div className="flex items-center gap-3 px-4 py-4 border-b border-[#262626] shrink-0">
               <button
-                className="md:hidden text-white hover:text-[#a8a8a8] transition-colors mr-1"
+                className="md:hidden text-white hover:text-[#a8a8a8] mr-1"
                 onClick={() => setMobileView('list')}
-                aria-label="Back"
               >
                 <ArrowLeft size={22} />
               </button>
-              <Avatar username={activeConv.other_user?.username} src={activeConv.other_user?.profile_picture_url} userId={activeConv.other_user?.id} size={44} />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white text-sm truncate">
-                  {activeConv.other_user?.username}
-                </p>
-              </div>
+              <Avatar
+                username={activeConv.other_user?.username}
+                src={activeConv.other_user?.profile_picture_url}
+                userId={activeConv.other_user?.id}
+                size={44}
+              />
+              <p className="font-semibold text-white text-sm truncate flex-1">
+                {activeConv.other_user?.username}
+              </p>
             </div>
 
-            {/* Message thread */}
+            {/* Received-request banner (recipient B) */}
+            {activeConvIsRequest && (
+              <div className="border-b border-[#262626] px-4 py-3 shrink-0">
+                <p className="text-sm text-[#a8a8a8] mb-3">
+                  <span className="font-semibold text-white">{activeConv.other_user?.username}</span>
+                  {' '}wants to send you a message. If you accept, they'll also be able to see when you've read messages.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAcceptRequest}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0095f6] hover:bg-[#1877f2] text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    <Check size={14} /> Accept
+                  </button>
+                  <button
+                    onClick={handleRejectRequest}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#363636] hover:bg-[#4d4d4d] text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    <X size={14} /> Delete
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Sent-request awaiting-approval banner (sender A, after first message) */}
+            {awaitingApproval && (
+              <div className="border-b border-[#262626] px-4 py-3 shrink-0 text-center">
+                <p className="text-sm text-[#a8a8a8]">
+                  Your message request is pending. You'll be able to chat once{' '}
+                  <span className="text-white font-semibold">{activeConv.other_user?.username}</span>{' '}
+                  accepts it.
+                </p>
+              </div>
+            )}
+
+            {/* Thread */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
               {msgsLoading ? (
                 <div className="flex justify-center items-center h-full">
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : messages.length === 0 ? (
-                <EmptyChatThread username={activeConv.other_user?.username} userId={activeConv.other_user?.id} profilePictureUrl={activeConv.other_user?.profile_picture_url} />
+                <EmptyChatThread
+                  username={activeConv.other_user?.username}
+                  userId={activeConv.other_user?.id}
+                  profilePictureUrl={activeConv.other_user?.profile_picture_url}
+                />
               ) : (
                 <>
                   {messages.map(msg => (
@@ -239,8 +410,10 @@ export default function Messages() {
               )}
             </div>
 
-            {/* Composer */}
-            <MessageInput onSend={handleSend} />
+            {/* Input: hidden for recipient of request; disabled after sender's first message */}
+            {!activeConvIsRequest && (
+              <MessageInput onSend={handleSend} disabled={awaitingApproval} />
+            )}
           </>
         ) : (
           <EmptyChatArea onNewMessage={() => setShowNewMsg(true)} />
@@ -257,7 +430,51 @@ export default function Messages() {
   )
 }
 
-// ── Small internal components ──────────────────────────────────────────────
+// ── Conversation row ────────────────────────────────────────────────────────
+
+function ConvRow({ conv, active, currentUserId, onClick }) {
+  const lastMsgText = () => {
+    const m = conv.last_message
+    if (!m) return 'No messages yet'
+    if (m.is_deleted_for_everyone) return 'Message deleted'
+    if (m.message_type === 'shared_post') return 'Shared a post'
+    if (m.message_type === 'shared_reel') return 'Shared a reel'
+    return m.body
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1a1a1a] transition-colors text-left ${
+        active ? 'bg-[#1a1a1a]' : ''
+      }`}
+    >
+      <Avatar
+        username={conv.other_user?.username}
+        src={conv.other_user?.profile_picture_url}
+        userId={conv.other_user?.id}
+        size={56}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{conv.other_user?.username}</p>
+        <p className="text-xs text-[#a8a8a8] truncate">
+          {lastMsgText()}
+          {conv.last_message && (
+            <span className="text-[#737373]"> · {timeAgo(conv.last_message.created_at)}</span>
+          )}
+        </p>
+      </div>
+      {/* Pending badge for sent requests */}
+      {conv.status === 'request' && conv.requester_id === currentUserId && (
+        <span className="shrink-0 text-[10px] text-[#a8a8a8] border border-[#363636] rounded px-1.5 py-0.5">
+          Pending
+        </span>
+      )}
+    </button>
+  )
+}
+
+// ── Small internal components ───────────────────────────────────────────────
 
 function ConvListSkeleton() {
   return (
@@ -291,6 +508,18 @@ function EmptyConvList({ onNewMessage }) {
       >
         Send message
       </button>
+    </div>
+  )
+}
+
+function EmptyRequests() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 px-6 py-12 text-center">
+      <MessageCircle size={40} className="text-[#a8a8a8]" strokeWidth={1.5} />
+      <p className="font-semibold text-white">No message requests</p>
+      <p className="text-sm text-[#a8a8a8]">
+        When someone messages you for the first time, you'll see it here.
+      </p>
     </div>
   )
 }
