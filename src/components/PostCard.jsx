@@ -125,7 +125,7 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
           </button>
         )}
 
-        <p className="text-[10px] text-[#a8a8a8] uppercase tracking-wide mt-1">
+        <p className="text-[10px] text-[#a8a8a8] tracking-wide mt-1">
           {timeAgo(post.created_at)}
         </p>
       </div>

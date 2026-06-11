@@ -62,7 +62,7 @@ function CommentRow({ comment, currentUserId, onDeleteComment, onReply, isReply 
             {comment.body}
           </p>
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-[10px] text-[#a8a8a8] uppercase tracking-wide">
+            <span className="text-[10px] text-[#a8a8a8] tracking-wide">
               {timeAgo(comment.created_at)}
             </span>
             {likesCount > 0 && (
@@ -169,7 +169,7 @@ export default function CommentsList({ post, comments, currentUserId, onDeleteCo
               </Link>
               {post.caption}
             </p>
-            <p className="text-[10px] text-[#a8a8a8] uppercase tracking-wide mt-1">
+            <p className="text-[10px] text-[#a8a8a8] tracking-wide mt-1">
               {timeAgo(post.created_at)}
             </p>
           </div>
