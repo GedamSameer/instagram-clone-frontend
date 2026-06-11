@@ -1,6 +1,6 @@
 import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react'
 
-export default function PostActions({ post, onLike, onSave, onCommentClick, className = '' }) {
+export default function PostActions({ post, onLike, onSave, onCommentClick, onShare, className = '' }) {
   return (
     <div className={`flex items-center justify-between ${className}`}>
       <div className="flex items-center gap-4">
@@ -29,7 +29,7 @@ export default function PostActions({ post, onLike, onSave, onCommentClick, clas
         </button>
 
         {/* Share */}
-        <button className="text-white hover:text-[#a8a8a8] transition-colors" aria-label="Share">
+        <button onClick={onShare} className="text-white hover:text-[#a8a8a8] transition-colors" aria-label="Share">
           <Send size={24} strokeWidth={2} />
         </button>
       </div>

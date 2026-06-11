@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { savePost, unsavePost } from '../api/posts'
 import Avatar from './Avatar'
 import PostActions from './PostActions'
+import ShareModal from './ShareModal'
 import { timeAgo } from '../utils/time'
 
 export default function PostCard({ post: initialPost, onLike, linkToDetail = true }) {
@@ -15,6 +16,7 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
   const [savedByMe, setSavedByMe] = useState(initialPost.saved_by_me ?? false)
   const [likedByMe, setLikedByMe] = useState(initialPost.liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(initialPost.like_count ?? 0)
+  const [showShare, setShowShare] = useState(false)
 
   /* Sync when parent updates post (like toggle) */
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
   }
 
   return (
+    <>
     <article className="border-b border-[#262626] pb-3">
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-3">
@@ -92,6 +95,7 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
           onLike={handleLike}
           onSave={handleSave}
           onCommentClick={() => openModal(true)}
+          onShare={() => setShowShare(true)}
         />
       </div>
 
@@ -126,5 +130,8 @@ export default function PostCard({ post: initialPost, onLike, linkToDetail = tru
         </p>
       </div>
     </article>
+
+    {showShare && <ShareModal postId={post.id} onClose={() => setShowShare(false)} />}
+    </>
   )
 }

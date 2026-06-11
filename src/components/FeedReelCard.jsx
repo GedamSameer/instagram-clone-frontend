@@ -6,6 +6,7 @@ import { likeReel, unlikeReel, saveReel, unsaveReel } from '../api/reels'
 import { followUser, unfollowUser } from '../api/users'
 import Avatar from './Avatar'
 import PostActions from './PostActions'
+import ShareModal from './ShareModal'
 import ReelCommentsModal from './ReelCommentsModal'
 import { timeAgo } from '../utils/time'
 
@@ -19,6 +20,7 @@ export default function FeedReelCard({ reel: initialReel }) {
   const [following, setFollowing] = useState(initialReel.is_following_user ?? false)
   const [muted, setMuted] = useState(true)
   const [showComments, setShowComments] = useState(false)
+  const [showShare, setShowShare] = useState(false)
 
   const isOwnReel = user && reel.user_id === user.id
 
@@ -174,6 +176,7 @@ export default function FeedReelCard({ reel: initialReel }) {
           onLike={handleLike}
           onSave={handleSave}
           onCommentClick={() => setShowComments(true)}
+          onShare={() => setShowShare(true)}
         />
       </div>
 
@@ -212,6 +215,8 @@ export default function FeedReelCard({ reel: initialReel }) {
           onCommentAdded={handleCommentAdded}
         />
       )}
+
+      {showShare && <ShareModal reelId={reel.id} onClose={() => setShowShare(false)} />}
     </article>
   )
 }

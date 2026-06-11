@@ -7,6 +7,7 @@ import { followUser, unfollowUser } from '../api/users'
 import Avatar from './Avatar'
 import ReelVideoPlayer from './ReelVideoPlayer'
 import ReelCommentsModal from './ReelCommentsModal'
+import ShareModal from './ShareModal'
 import { timeAgo } from '../utils/time'
 
 export default function ReelCard({ reel: initialReel, onBecomeActive }) {
@@ -14,7 +15,7 @@ export default function ReelCard({ reel: initialReel, onBecomeActive }) {
   const [reel, setReel] = useState(initialReel)
   const [following, setFollowing] = useState(initialReel.is_following_user ?? false)
   const [showComments, setShowComments] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [showShare, setShowShare] = useState(false)
 
   const isOwnReel = user && reel.user_id === user.id
 
@@ -49,14 +50,6 @@ export default function ReelCard({ reel: initialReel, onBecomeActive }) {
         await followUser(reel.user_id)
         setFollowing(true)
       }
-    } catch {}
-  }
-
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/reels/${reel.id}`)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     } catch {}
   }
 
@@ -170,20 +163,13 @@ export default function ReelCard({ reel: initialReel, onBecomeActive }) {
           </button>
 
           {/* Share */}
-          <div className="relative flex flex-col items-center gap-1">
-            <button onClick={handleShare} className="group">
-              <Send
-                size={28}
-                className="stroke-white fill-transparent group-hover:stroke-white/75 transition-colors"
-                strokeWidth={1.5}
-              />
-            </button>
-            {copied && (
-              <div className="absolute left-9 top-0 bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                Link copied!
-              </div>
-            )}
-          </div>
+          <button onClick={() => setShowShare(true)} className="group flex flex-col items-center gap-1">
+            <Send
+              size={28}
+              className="stroke-white fill-transparent group-hover:stroke-white/75 transition-colors"
+              strokeWidth={1.5}
+            />
+          </button>
 
           {/* Save */}
           <button onClick={handleSave} className="group">
@@ -216,6 +202,8 @@ export default function ReelCard({ reel: initialReel, onBecomeActive }) {
           onCommentAdded={handleCommentAdded}
         />
       )}
+
+      {showShare && <ShareModal reelId={reel.id} onClose={() => setShowShare(false)} />}
     </>
   )
 }
