@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNotifications, markAllNotificationsRead } from '../api/notifications'
 import { useNotifications } from '../context/NotificationsContext'
+import { timeAgo } from '../utils/time'
 import Avatar from '../components/Avatar'
 
 function getNotifText(n) {
@@ -32,13 +33,6 @@ function getNotifLink(n) {
   }
 }
 
-function timeAgo(dateStr) {
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
-  if (diff < 60)   return `${diff}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  return `${Math.floor(diff / 86400)}d`
-}
 
 function groupByTime(notifications) {
   const now = new Date()

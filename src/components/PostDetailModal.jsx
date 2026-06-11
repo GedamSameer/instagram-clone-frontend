@@ -6,6 +6,7 @@ import { createComment, getComments, deleteComment } from '../api/comments'
 import { useAuth } from '../auth/AuthContext'
 import Avatar from './Avatar'
 import PostActions from './PostActions'
+import ShareModal from './ShareModal'
 import CommentsList from './CommentsList'
 import CommentInput from './CommentInput'
 import { timeAgo } from '../utils/time'
@@ -20,6 +21,7 @@ export default function PostDetailModal() {
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
   const [replyTo, setReplyTo] = useState(null) // { commentId, userId, username }
+  const [showShare, setShowShare] = useState(false)
   const backdropRef = useRef(null)
 
   const focusComment = location.state?.focusComment ?? false
@@ -178,6 +180,7 @@ export default function PostDetailModal() {
                 post={post}
                 onLike={handleLike}
                 onSave={handleSave}
+                onShare={() => setShowShare(true)}
                 className="mb-2"
               />
               {post.like_count > 0 && (
@@ -211,6 +214,8 @@ export default function PostDetailModal() {
           </div>
         </div>
       )}
+
+      {showShare && post && <ShareModal postId={post.id} onClose={() => setShowShare(false)} />}
     </div>
   )
 }
